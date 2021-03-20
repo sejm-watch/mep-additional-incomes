@@ -4,6 +4,12 @@
     <link rel="icon" type="image/png" href="/meps_additional_occupations/img/sw_logo_small_squared.png" />
     <script src="https://d3js.org/d3.v6.min.js" />
 
+
+
+  </head>
+  <body>
+    <div>123</div>
+    
     <script>
       d3.csv("/meps_additional_occupations/data/declarations.csv", function(data) {
           for (var i = 0; i < data.length; i++) {
@@ -11,18 +17,5 @@
           }
       });
     </script>
-
-  </head>
-
-  <body>
-    <!-- <script>
-
-      d3.csv("/meps_additional_occupations/data/declarations.csv", function(data) {
-          for (var i = 0; i < data.length; i++) {
-              console.log(data[i].deputy_name);
-          }
-      });
-    </script> -->
   </body>
-
 </html>
