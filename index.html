@@ -2,21 +2,133 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="/meps_additional_occupations/img/sw_logo_small_squared.png" >
-    <script src="https://d3js.org/d3.v6.min.js"></ script>
+    <link rel="icon" type="image/png" href="img/sw_logo_small_squared.png" >
+    <script src="https://d3js.org/d3.v6.min.js"></script>
 
     <title>MEP side occupations</title>
   </head>
 
   <body>
+    <div id="earnings_by_country"></div>
 
     <script>
-      d3.csv("/meps_additional_occupations/data/declarations.csv", function(data) {
-          for (var i = 0; i < data.length; i++) {
-              console.log(data[i].deputy_name);
-          }
+      const median = arr => {
+        const mid = Math.floor(arr.length / 2),
+          nums = [...arr].sort((a, b) => a - b);
+        return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+      };
+
+      //earnings by country (ce)
+      var ce_margin = {top: 10, right: 30, bottom: 30, left: 70},
+          ce_width = 400 - ce_margin.left - ce_margin.right,
+          ce_height = 600 - ce_margin.top - ce_margin.bottom;
+
+
+      d3.csv("data/declarations.csv").then(function(data) {
+        var deputies = [...new Set(data.map(x => x.deputy_name))];
+        var eu_parties = [...new Set(data.map(x => x.eu_party_name))];
+        var countries = [...new Set(data.map(x => x.country))];
+        var organization_categories = [...new Set(data.map(x => x.organization_category))];
+
+        var deputies_earnings = [];
+        deputies.forEach(function(dep){
+            var dep_data = data.filter(x => x.deputy_name == dep);
+            var country = dep_data[0].country;
+            var eu_party =  dep_data[0].eu_party_name;
+
+            var dep_data = dep_data.filter(x => x.remuneration_type != "previous_occupations");
+            var occupations_count = dep_data.length
+            var paid_occupations_count = dep_data.filter(x => parseInt(x.salary_min) > 0).length;
+
+            var salary_min = dep_data.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0);
+            var salary_max = dep_data.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0);
+
+            deputies_earnings.push({
+              'deputy_name': dep,
+              'country': country,
+              'eu_party': eu_party,
+              'occupations_count': occupations_count,
+              'paid_occupations_count': paid_occupations_count,
+              'salary_min': salary_min,
+              'salary_max': salary_max
+            })
+        });
+        console.log(deputies_earnings)
+
+        var country_earnings = [];
+        countries.forEach(function(c){
+            var country_deputies = deputies_earnings.filter(x => x.country == c);
+
+            var deputies_count = country_deputies.length;
+            var deputies_additionally_paid = country_deputies.filter(x => parseInt(x.salary_min) > 0).length;
+            var perc_deputies_additionally_paid = deputies_additionally_paid/deputies_count
+
+            var occupations_count = country_deputies.map(x => parseInt(x.occupations_count)).reduce((a, b) => a + b, 0);
+            var paid_occupations_count = country_deputies.map(x => parseInt(x.paid_occupations_count)).reduce((a, b) => a + b, 0);
+
+            var avg_salary_min = country_deputies.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0)/deputies_count;
+            var avg_salary_max = country_deputies.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0)/deputies_count;
+
+            var median_salary_min = median(country_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_min)))
+            var median_salary_max = median(country_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_max)))
+
+            country_earnings.push({
+              'country': c,
+              'deputies_count': deputies_count,
+              'deputies_additionally_paid': deputies_additionally_paid,
+              'perc_deputies_additionally_paid': perc_deputies_additionally_paid,
+              'occupations_count': occupations_count,
+              'paid_occupations_count': paid_occupations_count,
+              'avg_salary_min': avg_salary_min,
+              'avg_salary_max': avg_salary_max,
+              'median_salary_min': median_salary_min,
+              'median_salary_max': median_salary_max
+            })
+        });
+        country_earnings = country_earnings.sort((a,b) => (a.perc_deputies_additionally_paid < b.perc_deputies_additionally_paid) ? 1 : ((b.perc_deputies_additionally_paid < a.perc_deputies_additionally_paid) ? -1 : 0))
+        console.log(country_earnings)
+
+
+        //building earnings by country chart
+        var svg = d3.select("#earnings_by_country")
+          .append("svg")
+            .attr("width", ce_width + ce_margin.left + ce_margin.right)
+            .attr("height", ce_height + ce_margin.top + ce_margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + ce_margin.left + "," + ce_margin.top + ")");
+
+        // Add X axis
+        var x = d3.scaleLinear()
+          .domain([0, d3.max(country_earnings.map(function(d) {return d.perc_deputies_additionally_paid}))*1.05])
+          .range([ 0, ce_width]);
+        /*
+        svg.append("g")
+          .attr("transform", "translate(0," + ce_height + ")")
+          .call(d3.axisBottom(x).tickFormat(d3.format(".0%")))
+          .selectAll("text")
+            .attr("transform", "translate(12,0)")
+            .style("text-anchor", "end")
+        */
+
+        // Y axis
+        var y = d3.scaleBand()
+          .range([ 0, ce_height ])
+          .domain(country_earnings.map(function(d) { return d.country; }))
+          .padding(.25);
+        svg.append("g")
+          .call(d3.axisLeft(y))
+
+        //Bars
+        svg.selectAll("bars")
+          .data(country_earnings)
+          .enter()
+          .append("rect")
+          .attr("x", x(0) )
+          .attr("y", function(d) { return y(d.country); })
+          .attr("width", function(d) { return x(d.perc_deputies_additionally_paid); })
+          .attr("height", y.bandwidth() )
+          .attr("fill", "#003399")
       });
     </script>
-
   </body>
 </html>
