@@ -6,6 +6,21 @@
     <script src="https://d3js.org/d3.v6.min.js"></script>
 
     <title>MEP side occupations</title>
+
+    <style>
+      div.tooltip {
+        position: absolute;
+        text-align: center;
+        width: 90px;
+        height: 28px;
+        padding: 2px;
+        font: 12px sans-serif;
+        background: #FFCC00;
+        border: 0px;
+        border-radius: 8px;
+        pointer-events: none;
+      }
+    </style>
   </head>
 
   <body>
@@ -88,8 +103,11 @@
         country_earnings = country_earnings.sort((a,b) => (a.perc_deputies_additionally_paid < b.perc_deputies_additionally_paid) ? 1 : ((b.perc_deputies_additionally_paid < a.perc_deputies_additionally_paid) ? -1 : 0))
         console.log(country_earnings)
 
-
         //building earnings by country chart
+        var div = d3.select("#earnings_by_country").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
         var svg = d3.select("#earnings_by_country")
           .append("svg")
             .attr("width", ce_width + ce_margin.left + ce_margin.right)
@@ -101,14 +119,6 @@
         var x = d3.scaleLinear()
           .domain([0, d3.max(country_earnings.map(function(d) {return d.perc_deputies_additionally_paid}))*1.05])
           .range([ 0, ce_width]);
-        /*
-        svg.append("g")
-          .attr("transform", "translate(0," + ce_height + ")")
-          .call(d3.axisBottom(x).tickFormat(d3.format(".0%")))
-          .selectAll("text")
-            .attr("transform", "translate(12,0)")
-            .style("text-anchor", "end")
-        */
 
         // Y axis
         var y = d3.scaleBand()
@@ -118,16 +128,58 @@
         svg.append("g")
           .call(d3.axisLeft(y))
 
-        //Bars
+        //bars
         svg.selectAll("bars")
           .data(country_earnings)
           .enter()
           .append("rect")
           .attr("x", x(0) )
           .attr("y", function(d) { return y(d.country); })
-          .attr("width", function(d) { return x(d.perc_deputies_additionally_paid); })
+          .attr("width", 0)
           .attr("height", y.bandwidth() )
           .attr("fill", "#003399")
+          .on("mouseover", function(event,d) {
+            div.transition()
+              .duration(200)
+              .style("opacity", .9);
+            div.html("<b>" + d.deputies_additionally_paid + "</b> out of <b>" + d.deputies_count + "</b><br/>additionally paid")
+              .style("left", (event.pageX) + "px")
+              .style("top", (event.pageY - 28) + "px");
+            })
+          .on("mouseout", function(d) {
+            div.transition()
+              .duration(500)
+              .style("opacity", 0);
+            });
+
+        svg.selectAll("rect")
+          .transition()
+          .duration(750)
+          .attr("width", function(d) { return x(d.perc_deputies_additionally_paid); })
+          .delay(function(d,i){return(i*50)})
+
+        //bar labels
+        svg.selectAll("bar_labels")
+          .data(country_earnings)
+          .enter()
+          .append("text")
+          .attr("x", function(d) { return x(d.perc_deputies_additionally_paid) - 25; } )
+          .attr("y", function(d) { return y(d.country) + 11.5; })
+          .style("font-size", "11px")
+          .style('opacity',0).transition().duration(750).style('opacity',1).delay(function(d,i){return(i*75)})
+          .attr("fill", "#FFFFFF")
+          .text(function(d) { return (d.perc_deputies_additionally_paid != 0) ? d3.format(".0%")(d.perc_deputies_additionally_paid) : '';});
+
+        /*
+        svg.selectAll("image")
+          .data(country_earnings)
+          .enter()
+          .append("svg:image")
+          .attr("xlink:href", function(d){ return "img/flags/" + d.country + "_flag.png" })
+          .attr("x", function(d) { return x(d.perc_deputies_additionally_paid) + 5; } )
+          .attr("y", function(d) { return y(d.country) + 1; })
+          .attr("height", y.bandwidth() * 0.90 )
+        */
       });
     </script>
   </body>
