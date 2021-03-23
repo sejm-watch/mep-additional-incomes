@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="img/sw_logo_small_squared.png" >
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <meta charset="UTF-8" >
+    <title>MEPs additional income - @sejm_watch</title>
 
-    <title>MEP side occupations</title>
+    <link rel="icon" type="image/png" href="img/sw_logo_small_squared.png">
+
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="js/viz.js"></script>
 
     <style>
       div.tooltip {
         position: absolute;
         text-align: center;
-        width: 90px;
+        width: 150px;
         height: 28px;
         padding: 2px;
         font: 12px sans-serif;
@@ -20,10 +22,88 @@
         border-radius: 8px;
         pointer-events: none;
       }
+
+
+      .label {
+        position: absolute;
+        top: 120px;
+        left: 150px;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+      }
+
+      .label-text {
+        margin-left: 8px;
+      }
+
+      .toggle {
+        isolation: isolate;
+        position: relative;
+        height: 15px;
+        width: 60px;
+        border-radius: 15px;
+        background: #FFCC00;
+        overflow: hidden;
+      }
+
+      .toggle-inner {
+        z-index: 2;
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        height: 14px;
+        width: 58px;
+        border-radius: 15px;
+        overflow: hidden;
+      }
+
+      .active-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 200%;
+        background: #6699ff;
+        transform: translate3d(-100%, 0, 0);
+        transition: transform 0.05s linear 0.17s;
+      }
+
+      .toggle-state {
+        display: none;
+      }
+
+      .indicator {
+        height: 100%;
+        width: 200%;
+        background: white;
+        border-radius: 13px;
+        transform: translate3d(-75%, 0, 0);
+        transition: transform 0.35s cubic-bezier(0.85, 0.05, 0.18, 1.35);
+      }
+
+      .toggle-state:checked ~ .active-bg {
+         transform: translate3d(-50%, 0, 0);
+      }
+
+      .toggle-state:checked ~ .toggle-inner .indicator {
+         transform: translate3d(25%, 0, 0);
+      }
+
     </style>
   </head>
 
   <body>
+    <label class="label">
+      <div class="toggle">
+        <input class="toggle-state" type="checkbox" id="toggle-button" value="check" onclick="toggle_country_party_charts()" />
+        <div class="toggle-inner">
+           <div class="indicator"></div>
+        </div>
+        <div class="active-bg"></div>
+      </div>
+    </label>
+
     <script>
       var iso_lang_country = {
         "eu": 'Spain',
@@ -58,40 +138,49 @@
         "es": "Spain",
         "sv": "Sweden"
       }
+
       var user_lang = navigator.language || navigator.userLanguage;
       var user_country = iso_lang_country[user_lang] === undefined ? iso_lang_country[user_lang.split("-")[0]] : iso_lang_country[user_lang]
       console.log(user_country)
       console.log(window.screen.width)
 
-      const median = arr => {
-        const mid = Math.floor(arr.length / 2),
-          nums = [...arr].sort((a, b) => a - b);
-        return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
-      };
+      //tooltip
+      var div_tooltip = d3.select("body").append("div")
+          .attr("class", "tooltip")
+          .style("opacity", 0);
 
-      //earnings by country (ce)
+      //svg & charts dimensions
       var svg_margin = {top: 10, right: 10, bottom: 10, left: 10},
           svg_width = 1600 - svg_margin.left - svg_margin.right,
           svg_height = 800 - svg_margin.top - svg_margin.bottom;
 
-      var top_left_margin = {top: 60, right: 30, bottom: 10, left: 65},
-          top_left_width = 600 - top_left_margin.left - top_left_margin.right,
+      var top_left_margin = {top: 80, right: 30, bottom: 10, left: 70},
+          top_left_width = 450 - top_left_margin.left - top_left_margin.right,
           top_left_height = 600 - top_left_margin.top - top_left_margin.bottom;
 
-      var top_middle_margin = {top: 60, right: 30, bottom: 10, left: 65},
-          top_middle_width = 600 - top_middle_margin.left - top_middle_margin.right,
+      var top_middle_margin = {top: 80, right: 30, bottom: 10, left: 70},
+          top_middle_width = 450 - top_middle_margin.left - top_middle_margin.right,
           top_middle_height = 600 - top_middle_margin.top - top_middle_margin.bottom;
+
+      var top_right_margin = {top: 80, right: 30, bottom: 10, left: 70},
+          top_right_width = 450 - top_right_margin.left - top_right_margin.right,
+          top_right_height = 300 - top_right_margin.top - top_right_margin.bottom;
 
       var header_height = 60
       var header_width = 1600
 
+      var country_income = [];
+      var party_income = [];
+
       d3.csv("data/declarations.csv").then(function(data) {
+        //prepare data arrays for charts
         var deputies = [...new Set(data.map(x => x.deputy_name))];
         var eu_parties = [...new Set(data.map(x => x.eu_party_name))];
         var countries = [...new Set(data.map(x => x.country))];
         var organization_categories = [...new Set(data.map(x => x.organization_category))];
 
-        var deputies_earnings = [];
+        //single deputies income
+        var deputies_income = [];
         deputies.forEach(function(dep){
             var dep_data = data.filter(x => x.deputy_name == dep);
             var country = dep_data[0].country;
@@ -104,7 +193,7 @@
             var salary_min = dep_data.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0);
             var salary_max = dep_data.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0);
 
-            deputies_earnings.push({
+            deputies_income.push({
               'deputy_name': dep,
               'country': country,
               'eu_party': eu_party,
@@ -114,10 +203,12 @@
               'salary_max': salary_max
             })
         });
+        deputies_income = deputies_income.sort((a,b) => (a.salary_max < b.salary_max) ? 1 : ((b.salary_max < a.salary_max) ? -1 : 0))
+        console.log(deputies_income)
 
-        var country_earnings = [];
+        
         countries.forEach(function(c){
-            var country_deputies = deputies_earnings.filter(x => x.country == c);
+            var country_deputies = deputies_income.filter(x => x.country == c);
 
             var deputies_count = country_deputies.length;
             var deputies_additionally_paid = country_deputies.filter(x => parseInt(x.salary_min) > 0).length;
@@ -132,7 +223,7 @@
             var median_salary_min = median(country_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_min)))
             var median_salary_max = median(country_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_max)))
 
-            country_earnings.push({
+            country_income.push({
               'country': c,
               'deputies_count': deputies_count,
               'deputies_additionally_paid': deputies_additionally_paid,
@@ -145,20 +236,48 @@
               'median_salary_max': median_salary_max
             })
         });
-        country_earnings = country_earnings.sort((a,b) => (a.perc_deputies_additionally_paid < b.perc_deputies_additionally_paid) ? 1 : ((b.perc_deputies_additionally_paid < a.perc_deputies_additionally_paid) ? -1 : 0))
+        country_income = country_income.sort((a,b) => (a.perc_deputies_additionally_paid < b.perc_deputies_additionally_paid) ? 1 : ((b.perc_deputies_additionally_paid < a.perc_deputies_additionally_paid) ? -1 : 0))
+        //console.log(country_income)
 
-        var div_tooltip = d3.select("body").append("div")
-            .attr("class", "tooltip")
-            .style("opacity", 0);
+        eu_parties.forEach(function(p){
+            var party_deputies = deputies_income.filter(x => x.eu_party == p);
 
+            var deputies_count = party_deputies.length;
+            var deputies_additionally_paid = party_deputies.filter(x => parseInt(x.salary_min) > 0).length;
+            var perc_deputies_additionally_paid = deputies_additionally_paid/deputies_count
+
+            var occupations_count = party_deputies.map(x => parseInt(x.occupations_count)).reduce((a, b) => a + b, 0);
+            var paid_occupations_count = party_deputies.map(x => parseInt(x.paid_occupations_count)).reduce((a, b) => a + b, 0);
+
+            var avg_salary_min = party_deputies.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0)/deputies_count;
+            var avg_salary_max = party_deputies.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0)/deputies_count;
+
+            var median_salary_min = median(party_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_min)))
+            var median_salary_max = median(party_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_max)))
+
+            party_income.push({
+              'eu_party': p,
+              'deputies_count': deputies_count,
+              'deputies_additionally_paid': deputies_additionally_paid,
+              'perc_deputies_additionally_paid': perc_deputies_additionally_paid,
+              'occupations_count': occupations_count,
+              'paid_occupations_count': paid_occupations_count,
+              'avg_salary_min': avg_salary_min,
+              'avg_salary_max': avg_salary_max,
+              'median_salary_min': median_salary_min,
+              'median_salary_max': median_salary_max
+            })
+        });
+        party_income = party_income.sort((a,b) => (a.perc_deputies_additionally_paid < b.perc_deputies_additionally_paid) ? 1 : ((b.perc_deputies_additionally_paid < a.perc_deputies_additionally_paid) ? -1 : 0))
+        //console.log(party_income)
+
+        //##################################
+        //svg container, header & footer
+        //##################################
         var svg = d3.select("body").append("svg").attr("id","container")
           .attr("width", svg_width + svg_margin.left + svg_margin.right)
           .attr("height", svg_height + svg_margin.top + svg_margin.bottom)
 
-
-        //##################################
-        //header & footer
-        //##################################
         var header = svg.append("g").attr("id", 'header')
         header.append("text").attr("class", "title")
           .attr("x", 20)
@@ -186,7 +305,7 @@
           .attr("y", 775)
           .style("font-size", "24px").style("font-weight", "bold").text("@sejm_watch")
           footer.append("text").attr("class", "subtitle")
-            .attr("x", 165)
+            .attr("x", 166)
             .attr("y", 795)
             .style("font-size", "14px").text("twitter.com/sejm_watch")
 
@@ -195,145 +314,89 @@
           .attr("y1", 750).attr("y2", 750)
           .attr("stroke", "#000000").attr("stroke-width", "1px")
 
+
+
         //##################################
-        //building earnings % by country chart
+        //building earnings % by country chart (top left)
         //##################################
-        var top_left_chart = svg.append("g").attr("id", 'top_left_chart')
+        var top_left_heading = svg.append("g").attr("class", "section_heading")
+        top_left_heading.append("text")
+          .attr("x", top_left_margin.left)
+          .attr("y", header_height + 35)
+          .style("font-size", "18px").style("font-weight", "bold").text("% of MEPs declaring additional monthly income")
+
+        var top_left_legend = svg.append("g").attr("class", "legend")
+        top_left_legend.append("text").attr("id", "label_by_country")
+          .attr("x", top_left_margin.left)
+          .attr("y", header_height + 63)
+          .style("fill", "#000000")
+          .style("font-size", "14px").style("font-style", "italic").text("by country")
+        top_left_legend.append("text").attr("id", "label_by_party")
+          .attr("x", top_left_margin.left + 142)
+          .attr("y", header_height + 63)
+          .style("fill", "#AAAAAA")
+          .style("font-size", "14px").style("font-style", "italic").text("by political party")
+
+        var top_left_chart = svg.append("g")
             .attr("width", top_left_width + top_left_margin.left + top_left_margin.right)
             .attr("height", top_left_height + top_left_margin.top + top_left_margin.bottom)
-          .append("g")
+          .append("g").attr("id", 'top_left_chart')
             .attr("transform", "translate(" + top_left_margin.left + "," + (header_height + top_left_margin.top) + ")");
+        top_left_chart.append("g").attr("class", "y_axis")
 
-        // Add X axis
-        var x = d3.scaleLinear()
-          .domain([0, d3.max(country_earnings.map(function(d) {return d.perc_deputies_additionally_paid}))*1.05])
-          .range([ 0, top_left_width]);
+        //Build chart
+        draw_column_chart("#top_left_chart", div_tooltip, country_income, 'perc_deputies_additionally_paid', 'country', ['deputies_additionally_paid','deputies_count'], top_left_width, top_left_height)
 
-        // Y axis
-        var y = d3.scaleBand()
-          .range([ 0, top_left_height ])
-          .domain(country_earnings.map(function(d) { return d.country; }))
-          .padding(.25);
-        top_left_chart.append("g")
-          .call(d3.axisLeft(y))
+        //##################################
+        //building earnings median by country chart (top middle)
+        //##################################
+        var top_middle_heading = svg.append("g").attr("class", "section_heading")
+        top_middle_heading.append("text")
+          .attr("x", top_left_margin.left + top_left_width +  top_left_margin.right + top_middle_margin.left)
+          .attr("y", header_height + 35)
+          .style("font-size", "18px").style("font-weight", "bold").text("Median income (of those who declared any)")
 
-        //bars
-        top_left_chart.selectAll("bars")
-          .data(country_earnings)
-          .enter()
-          .append("rect")
-          .attr("x", x(0) )
-          .attr("y", function(d) { return y(d.country); })
-          .attr("width", 0)
-          .attr("height", y.bandwidth() )
-          .attr("fill", "#003399")
-          .on("mouseover", function(event, d) {
-            div_tooltip.transition()
-              .duration(200)
-              .style("opacity", .9);
-            div_tooltip.html("<b>" + d.deputies_additionally_paid + "</b> out of <b>" + d.deputies_count + "</b><br/>additionally paid")
-              .style("left", (event.pageX) + "px")
-              .style("top", (event.pageY - 28) + "px");
-            })
-          .on("mouseout", function(d) {
-            div_tooltip.transition()
-              .duration(300)
-              .style("opacity", 0);
-            });
+        var top_middle_legend = svg.append("g").attr("class", "legend")
+        top_middle_legend.append("text")
+          .attr("x", top_left_margin.left + top_left_width +  top_left_margin.right + top_middle_margin.left)
+          .attr("y", header_height + 53)
+          .style("font-size", "12px").style("font-style", "italic").text("*MEPs declare financial interests categorizing ranges of income (from-to).")
+        top_middle_legend.append("text")
+          .attr("x", top_left_margin.left + top_left_width +  top_left_margin.right + top_middle_margin.left)
+          .attr("y", header_height + 70)
+          .style("font-size", "12px").style("font-style", "italic").text("The chart presents both minimal\u00A0\u00A0\u00A0\u00A0\u00A0and maximal\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0declared income")
 
-        top_left_chart.selectAll("rect")
-          .transition().delay(0).duration(750)
-          .attr("width", function(d) { return x(d.perc_deputies_additionally_paid); })
-          .delay(function(d,i){return(i*50)})
+        top_middle_legend
+          .append("circle")
+            .attr("cx", top_left_margin.left + top_left_width +  top_left_margin.right + top_middle_margin.left + 164)
+            .attr("cy", header_height + 66)
+            .attr("r", "4")
+            .style("fill", "#FFCC00").style("stroke", "#003399");
+        top_middle_legend
+          .append("circle")
+            .attr("cx", top_left_margin.left + top_left_width +  top_left_margin.right + top_middle_margin.left + 246)
+            .attr("cy", header_height + 66)
+            .attr("r", "8")
+            .style("fill", "#6699ff").style("stroke", "#003399");
 
-        //bar labels
-        top_left_chart.selectAll("bar_labels")
-          .data(country_earnings)
-          .enter()
-          .append("text")
-          .attr("x", function(d) { return x(d.perc_deputies_additionally_paid) - 25; } )
-          .attr("y", function(d) { return y(d.country) + 11.5; })
-          .style("font-size", "11px")
-          .style('opacity',0).transition().duration(500).style('opacity',1).delay(function(d,i){return(400+i*50)})
-          .attr("fill", "#FFFFFF")
-          .text(function(d) { return (d.perc_deputies_additionally_paid != 0) ? d3.format(".0%")(d.perc_deputies_additionally_paid) : '';});
+        var top_middle_chart = svg.append("g")
+            .attr("width", top_middle_width + top_middle_margin.left + top_middle_margin.right)
+            .attr("height", top_middle_height + top_middle_margin.top + top_middle_margin.bottom)
+          .append("g").attr("id", 'top_middle_chart')
+            .attr("transform", "translate(" + (top_middle_margin.left + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_middle_margin.top) + ")");
+        top_middle_chart.append("g").attr("class", "y_axis")
+        top_middle_chart.append("g").attr("class", "x_axis")
+        //Build chart
+        draw_cleveland_chart("#top_middle_chart", div_tooltip, country_income, 'median_salary_min', 'median_salary_max', 'country', ['median_salary_min', 'median_salary_max'], top_middle_width, top_middle_height)
 
 
-          //##################################
-          //building earnings median by country chart
-          //##################################
-          var top_middle_chart = svg.append("g").attr("id", 'top_middle_chart')
-              .attr("width", top_middle_width + top_middle_margin.left + top_middle_margin.right)
-              .attr("height", top_middle_height + top_middle_margin.top + top_middle_margin.bottom)
-            .append("g")
-              .attr("transform", "translate(" + (top_middle_margin.left + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_middle_margin.top) + ")");
-
-          // Add X axis
-          var x = d3.scaleLinear()
-            .domain([0, d3.max(country_earnings.map(function(d) {return d.median_salary_max}))*1.05])
-            .range([ 0, top_middle_width]);
-          top_middle_chart.append("g")
-            .attr("transform", "translate(0," + top_middle_height + ")")
-            .call(d3.axisBottom(x)
-              .tickFormat(d3.format(".0s"))
-            )
-
-          // Y axis
-          var y = d3.scaleBand()
-            .range([ 0,top_middle_height ])
-            .domain(country_earnings.map(function(d) { return d.country; }))
-            .padding(1);
-          top_middle_chart.append("g")
-            .call(d3.axisLeft(y))
-
-          //bars
-          top_middle_chart.selectAll("cleveland_lines")
-            .data(country_earnings)
-            .enter()
-            .append("line")
-              .attr("x1", function(d) { return x(d.median_salary_min); })
-              .attr("x2", function(d) { return x(d.median_salary_min); })
-              .attr("y1", function(d) { return y(d.country); })
-              .attr("y2", function(d) { return y(d.country); })
-              .attr("stroke", "#003399")
-              .attr("stroke-width", "2px")
-              .transition().delay(0).duration(500)
-                .attr("x2", function(d) { return x(d.median_salary_max); }).delay(function(d,i){return(400+i*50)})
-
-
-          top_middle_chart.selectAll("cleveland_circles")
-            .data(country_earnings)
-            .enter()
-            .append("circle")
-              .attr("cx", function(d) { return x(d.median_salary_min); })
-              .attr("cy", function(d) { return y(d.country); })
-              .attr("r", "6")
-              .style("fill", "#FFCC00")
-              .style("stroke", "#003399");
-
-          top_middle_chart.selectAll("cleveland_circles")
-            .data(country_earnings)
-            .enter()
-            .append("circle")
-              .attr("cx", function(d) { return x(d.median_salary_min); })
-              .attr("cy", function(d) { return y(d.country); })
-              .attr("r", "6")
-              .style("fill", "#6699ff")
-              .style("stroke", "#003399")
-              .transition().delay(0).duration(500)
-                .attr("cx", function(d) { return x(d.median_salary_max); }).delay(function(d,i){return(400+i*50)})
-
-          top_middle_chart.selectAll("cleveland_labels")
-            .data(country_earnings)
-            .enter()
-            .append("text")
-            .attr("x", function(d) { return isNaN(d.median_salary_max) ? 0 : x(d.median_salary_max) + 10; } )
-            .attr("y", function(d) { return y(d.country) + 4.5; })
-            .style("font-size", "11px")
-            .style('opacity',0).transition().duration(500).style('opacity',1).delay(function(d,i){return(400+i*50)})
-            .attr("fill", "#000000")
-            .text(function(d) { return isNaN(d.median_salary_max) ? '' : Math.round(d.median_salary_max/100)/10 + " kEUR"});
-
+        var top_right_chart = svg.append("g")
+            .attr("width", top_right_width + top_right_margin.left + top_right_margin.right)
+            .attr("height", top_right_height + top_right_margin.top +top_right_margin.bottom)
+          .append("g").attr("id", 'top_right_chart')
+            .attr("transform", "translate(" + (top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_right_margin.top) + ")");
+        top_right_chart.append("g").attr("class", "y_axis")
+        top_right_chart.append("g").attr("class", "x_axis")
 
       });
     </script>
