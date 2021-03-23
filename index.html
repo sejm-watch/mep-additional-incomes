@@ -24,9 +24,45 @@
   </head>
 
   <body>
-    <div id="earnings_by_country"></div>
-
     <script>
+      var iso_lang_country = {
+        "eu": 'Spain',
+        "bg": 'Bulgaria',
+        "ca": 'Spain',
+        "hr": 'Croatia',
+        "cs": 'Czechia',
+        "da": 'Denmark',
+        "nl": 'Netherlands',
+        "nl-BE": 'Belgium',
+        "en-IE": 'Ireland',
+        "et": 'Estonia',
+        "fi": 'Finland',
+        "fr": 'France',
+        "fr-BE": 'Belgium',
+        "fr-LU": 'Luxembourg',
+        "gd-IE": 'Ireland',
+        "de": 'Germany',
+        "de-AT": 'Austria',
+        "de-LU": 'Luxembourg',
+        "el": 'Greece',
+        "hu": 'Hungary',
+        "it": "Italy",
+        "lv": "Latvia",
+        "lt": "Lithuania",
+        "pl": "Poland",
+        "pt-BR": "Portugal",
+        "pt": "Portugal",
+        "ro": "Romania",
+        "sk": "Slovakia",
+        "sl": "Slovenia",
+        "es": "Spain",
+        "sv": "Sweden"
+      }
+      var user_lang = navigator.language || navigator.userLanguage;
+      var user_country = iso_lang_country[user_lang] === undefined ? iso_lang_country[user_lang.split("-")[0]] : iso_lang_country[user_lang]
+      console.log(user_country)
+      console.log(window.screen.width)
+
       const median = arr => {
         const mid = Math.floor(arr.length / 2),
           nums = [...arr].sort((a, b) => a - b);
@@ -34,10 +70,20 @@
       };
 
       //earnings by country (ce)
-      var ce_margin = {top: 10, right: 30, bottom: 30, left: 70},
-          ce_width = 400 - ce_margin.left - ce_margin.right,
-          ce_height = 600 - ce_margin.top - ce_margin.bottom;
+      var svg_margin = {top: 10, right: 10, bottom: 10, left: 10},
+          svg_width = 1600 - svg_margin.left - svg_margin.right,
+          svg_height = 800 - svg_margin.top - svg_margin.bottom;
 
+      var top_left_margin = {top: 60, right: 30, bottom: 10, left: 65},
+          top_left_width = 600 - top_left_margin.left - top_left_margin.right,
+          top_left_height = 600 - top_left_margin.top - top_left_margin.bottom;
+
+      var top_middle_margin = {top: 60, right: 30, bottom: 10, left: 65},
+          top_middle_width = 600 - top_middle_margin.left - top_middle_margin.right,
+          top_middle_height = 600 - top_middle_margin.top - top_middle_margin.bottom;
+
+      var header_height = 60
+      var header_width = 1600
 
       d3.csv("data/declarations.csv").then(function(data) {
         var deputies = [...new Set(data.map(x => x.deputy_name))];
@@ -68,7 +114,6 @@
               'salary_max': salary_max
             })
         });
-        console.log(deputies_earnings)
 
         var country_earnings = [];
         countries.forEach(function(c){
@@ -101,35 +146,79 @@
             })
         });
         country_earnings = country_earnings.sort((a,b) => (a.perc_deputies_additionally_paid < b.perc_deputies_additionally_paid) ? 1 : ((b.perc_deputies_additionally_paid < a.perc_deputies_additionally_paid) ? -1 : 0))
-        console.log(country_earnings)
 
-        //building earnings by country chart
-        var div = d3.select("#earnings_by_country").append("div")
+        var div_tooltip = d3.select("body").append("div")
             .attr("class", "tooltip")
             .style("opacity", 0);
 
-        var svg = d3.select("#earnings_by_country")
-          .append("svg")
-            .attr("width", ce_width + ce_margin.left + ce_margin.right)
-            .attr("height", ce_height + ce_margin.top + ce_margin.bottom)
+        var svg = d3.select("body").append("svg").attr("id","container")
+          .attr("width", svg_width + svg_margin.left + svg_margin.right)
+          .attr("height", svg_height + svg_margin.top + svg_margin.bottom)
+
+
+        //##################################
+        //header & footer
+        //##################################
+        var header = svg.append("g").attr("id", 'header')
+        header.append("text").attr("class", "title")
+          .attr("x", 20)
+          .attr("y", 30)
+          .style("font-size", "36px").text("MEPs additional monthly income")
+
+        header.append("text").attr("class", "subtitle")
+          .attr("x", 20)
+          .attr("y", 50)
+          .style("font-size", "18px").text("Submitted income declarations, 2019-2021")
+
+        header.append("line")
+          .attr("x1", 0).attr("x2", header_width)
+          .attr("y1", header_height).attr("y2", header_height)
+          .attr("stroke", "#000000").attr("stroke-width", "1px")
+
+        var footer = svg.append("g").attr("id", 'footer')
+        footer.append("svg:image").attr("class","logotype")
+          .attr("xlink:href", "img/sw_eye.png")
+          .attr("x", 20)
+          .attr("y", 760)
+          .attr("height", 40)
+        footer.append("text").attr("class", "subtitle")
+          .attr("x", 160)
+          .attr("y", 775)
+          .style("font-size", "24px").style("font-weight", "bold").text("@sejm_watch")
+          footer.append("text").attr("class", "subtitle")
+            .attr("x", 165)
+            .attr("y", 795)
+            .style("font-size", "14px").text("twitter.com/sejm_watch")
+
+        footer.append("line")
+          .attr("x1", 0).attr("x2", header_width)
+          .attr("y1", 750).attr("y2", 750)
+          .attr("stroke", "#000000").attr("stroke-width", "1px")
+
+        //##################################
+        //building earnings % by country chart
+        //##################################
+        var top_left_chart = svg.append("g").attr("id", 'top_left_chart')
+            .attr("width", top_left_width + top_left_margin.left + top_left_margin.right)
+            .attr("height", top_left_height + top_left_margin.top + top_left_margin.bottom)
           .append("g")
-            .attr("transform", "translate(" + ce_margin.left + "," + ce_margin.top + ")");
+            .attr("transform", "translate(" + top_left_margin.left + "," + (header_height + top_left_margin.top) + ")");
 
         // Add X axis
         var x = d3.scaleLinear()
           .domain([0, d3.max(country_earnings.map(function(d) {return d.perc_deputies_additionally_paid}))*1.05])
-          .range([ 0, ce_width]);
+          .range([ 0, top_left_width]);
 
         // Y axis
         var y = d3.scaleBand()
-          .range([ 0, ce_height ])
+          .range([ 0, top_left_height ])
           .domain(country_earnings.map(function(d) { return d.country; }))
           .padding(.25);
-        svg.append("g")
+        top_left_chart.append("g")
           .call(d3.axisLeft(y))
 
         //bars
-        svg.selectAll("bars")
+        top_left_chart.selectAll("bars")
           .data(country_earnings)
           .enter()
           .append("rect")
@@ -138,49 +227,116 @@
           .attr("width", 0)
           .attr("height", y.bandwidth() )
           .attr("fill", "#003399")
-          .on("mouseover", function(event,d) {
-            div.transition()
+          .on("mouseover", function(event, d) {
+            div_tooltip.transition()
               .duration(200)
               .style("opacity", .9);
-            div.html("<b>" + d.deputies_additionally_paid + "</b> out of <b>" + d.deputies_count + "</b><br/>additionally paid")
+            div_tooltip.html("<b>" + d.deputies_additionally_paid + "</b> out of <b>" + d.deputies_count + "</b><br/>additionally paid")
               .style("left", (event.pageX) + "px")
               .style("top", (event.pageY - 28) + "px");
             })
           .on("mouseout", function(d) {
-            div.transition()
-              .duration(500)
+            div_tooltip.transition()
+              .duration(300)
               .style("opacity", 0);
             });
 
-        svg.selectAll("rect")
-          .transition()
-          .duration(750)
+        top_left_chart.selectAll("rect")
+          .transition().delay(0).duration(750)
           .attr("width", function(d) { return x(d.perc_deputies_additionally_paid); })
           .delay(function(d,i){return(i*50)})
 
         //bar labels
-        svg.selectAll("bar_labels")
+        top_left_chart.selectAll("bar_labels")
           .data(country_earnings)
           .enter()
           .append("text")
           .attr("x", function(d) { return x(d.perc_deputies_additionally_paid) - 25; } )
           .attr("y", function(d) { return y(d.country) + 11.5; })
           .style("font-size", "11px")
-          .style('opacity',0).transition().duration(750).style('opacity',1).delay(function(d,i){return(i*75)})
+          .style('opacity',0).transition().duration(500).style('opacity',1).delay(function(d,i){return(400+i*50)})
           .attr("fill", "#FFFFFF")
           .text(function(d) { return (d.perc_deputies_additionally_paid != 0) ? d3.format(".0%")(d.perc_deputies_additionally_paid) : '';});
 
-        /*
-        svg.selectAll("image")
-          .data(country_earnings)
-          .enter()
-          .append("svg:image")
-          .attr("xlink:href", function(d){ return "img/flags/" + d.country + "_flag.png" })
-          .attr("x", function(d) { return x(d.perc_deputies_additionally_paid) + 5; } )
-          .attr("y", function(d) { return y(d.country) + 1; })
-          .attr("height", y.bandwidth() * 0.90 )
-        */
+
+          //##################################
+          //building earnings median by country chart
+          //##################################
+          var top_middle_chart = svg.append("g").attr("id", 'top_middle_chart')
+              .attr("width", top_middle_width + top_middle_margin.left + top_middle_margin.right)
+              .attr("height", top_middle_height + top_middle_margin.top + top_middle_margin.bottom)
+            .append("g")
+              .attr("transform", "translate(" + (top_middle_margin.left + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_middle_margin.top) + ")");
+
+          // Add X axis
+          var x = d3.scaleLinear()
+            .domain([0, d3.max(country_earnings.map(function(d) {return d.median_salary_max}))*1.05])
+            .range([ 0, top_middle_width]);
+          top_middle_chart.append("g")
+            .attr("transform", "translate(0," + top_middle_height + ")")
+            .call(d3.axisBottom(x)
+              .tickFormat(d3.format(".0s"))
+            )
+
+          // Y axis
+          var y = d3.scaleBand()
+            .range([ 0,top_middle_height ])
+            .domain(country_earnings.map(function(d) { return d.country; }))
+            .padding(1);
+          top_middle_chart.append("g")
+            .call(d3.axisLeft(y))
+
+          //bars
+          top_middle_chart.selectAll("cleveland_lines")
+            .data(country_earnings)
+            .enter()
+            .append("line")
+              .attr("x1", function(d) { return x(d.median_salary_min); })
+              .attr("x2", function(d) { return x(d.median_salary_min); })
+              .attr("y1", function(d) { return y(d.country); })
+              .attr("y2", function(d) { return y(d.country); })
+              .attr("stroke", "#003399")
+              .attr("stroke-width", "2px")
+              .transition().delay(0).duration(500)
+                .attr("x2", function(d) { return x(d.median_salary_max); }).delay(function(d,i){return(400+i*50)})
+
+
+          top_middle_chart.selectAll("cleveland_circles")
+            .data(country_earnings)
+            .enter()
+            .append("circle")
+              .attr("cx", function(d) { return x(d.median_salary_min); })
+              .attr("cy", function(d) { return y(d.country); })
+              .attr("r", "6")
+              .style("fill", "#FFCC00")
+              .style("stroke", "#003399");
+
+          top_middle_chart.selectAll("cleveland_circles")
+            .data(country_earnings)
+            .enter()
+            .append("circle")
+              .attr("cx", function(d) { return x(d.median_salary_min); })
+              .attr("cy", function(d) { return y(d.country); })
+              .attr("r", "6")
+              .style("fill", "#6699ff")
+              .style("stroke", "#003399")
+              .transition().delay(0).duration(500)
+                .attr("cx", function(d) { return x(d.median_salary_max); }).delay(function(d,i){return(400+i*50)})
+
+          top_middle_chart.selectAll("cleveland_labels")
+            .data(country_earnings)
+            .enter()
+            .append("text")
+            .attr("x", function(d) { return isNaN(d.median_salary_max) ? 0 : x(d.median_salary_max) + 10; } )
+            .attr("y", function(d) { return y(d.country) + 4.5; })
+            .style("font-size", "11px")
+            .style('opacity',0).transition().duration(500).style('opacity',1).delay(function(d,i){return(400+i*50)})
+            .attr("fill", "#000000")
+            .text(function(d) { return isNaN(d.median_salary_max) ? '' : Math.round(d.median_salary_max/100)/10 + " kEUR"});
+
+
       });
     </script>
+
   </body>
 </html>
