@@ -14,7 +14,7 @@
         position: absolute;
         text-align: center;
         width: 150px;
-        height: 28px;
+        height: 42px;
         padding: 2px;
         font: 12px sans-serif;
         background: #FFCC00;
@@ -287,23 +287,24 @@
 
 
         organization_categories.forEach(function(o){
+
               var org_deputies = deputies_income.filter(x => x[o + "_salary_max"] != 0 && x.remuneration_type != "previous_occupations");
 
               var deputies_count = org_deputies.length;
-              var deputies_additionally_paid = org_deputies.filter(x => parseInt(x.salary_min) > 0).length;
+              var deputies_additionally_paid = org_deputies.filter(x => parseInt(x[o + "_salary_max"]) > 0).length;
               var perc_deputies_additionally_paid = deputies_additionally_paid/deputies_count
 
               var occupations_count = org_deputies.map(x => parseInt(x.occupations_count)).reduce((a, b) => a + b, 0);
               var paid_occupations_count = org_deputies.map(x => parseInt(x.paid_occupations_count)).reduce((a, b) => a + b, 0);
 
-              var total_salary_min = org_deputies.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0)
-              var total_salary_max = org_deputies.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0)
+              var total_salary_min = org_deputies.map(x => parseInt(x[o + "_salary_min"])).reduce((a, b) => a + b, 0)
+              var total_salary_max = org_deputies.map(x => parseInt(x[o + "_salary_max"])).reduce((a, b) => a + b, 0)
 
-              var avg_salary_min = org_deputies.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0)/deputies_count;
-              var avg_salary_max = org_deputies.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0)/deputies_count;
+              var avg_salary_min = org_deputies.map(x => parseInt(x[o + "_salary_min"])).reduce((a, b) => a + b, 0)/deputies_count;
+              var avg_salary_max = org_deputies.map(x => parseInt(x[o + "_salary_max"])).reduce((a, b) => a + b, 0)/deputies_count;
 
-              var median_salary_min = median(org_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_min)))
-              var median_salary_max = median(org_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_max)))
+              var median_salary_min = median(org_deputies.filter(x => parseInt(x[o + "_salary_min"]) > 0).map(x => parseInt(x[o + "_salary_min"])))
+              var median_salary_max = median(org_deputies.filter(x => parseInt(x[o + "_salary_max"]) > 0).map(x => parseInt(x[o + "_salary_max"])))
 
               category_income.push({
                 'organization_category': o,
@@ -454,7 +455,7 @@
           top_right_legend.append("text")
             .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
             .attr("y", header_height + 53)
-            .style("font-size", "12px").style("font-style", "italic").text("*Maximal income presented, hoover photo to see income range.")
+            .style("font-size", "12px").style("font-style", "italic").text("*Maximal income presented, hover photo to see income range")
         var top_right_chart = svg.append("g")
             .attr("width", top_right_width + top_right_margin.left + top_right_margin.right)
             .attr("height", top_right_height + top_right_margin.top +top_right_margin.bottom)
@@ -480,11 +481,11 @@
           bottom_right_legend.append("text")
             .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
             .attr("y", header_height + top_right_height + top_right_margin.top + top_right_margin.bottom + 53)
-            .style("font-size", "12px").style("font-style", "italic").text("*Maximal income presented, hoover photo to see income range.")
+            .style("font-size", "12px").style("font-style", "italic").text("*Sum of declared maximal incomes, categorized into business areas, hover bars to see income range")
         var bottom_right_chart = svg.append("g")
             .attr("width", top_right_width + top_right_margin.left + top_right_margin.right)
             .attr("height", top_right_height + top_right_margin.top +top_right_margin.bottom)
-          .append("g").attr("id", 'top_right_chart')
+          .append("g").attr("id", 'bottom_right_chart')
             .attr("transform", "translate(" + (top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_right_margin.top + top_right_height + top_right_margin.bottom + top_right_margin.top) + ")");
         bottom_right_chart.append("g").attr("class", "y_axis")
         bottom_right_chart.append("g").attr("class", "x_axis")
@@ -493,8 +494,8 @@
         top_n_categories = category_income.filter((d) => d.organization_category != 'Unknown')
         top_n_categories = top_n_categories.filter((d,idx) => idx < 10)
         top_n_categories.push(top_n_categories.splice(top_n_categories.findIndex(function(e){return e.organization_category=='Other'}), 1)[0]);
-        console.log(top_n_categories)
-        //draw_horizontal_column_chart("#top_right_chart", div_tooltip, top_n_categories, 'organization_category', 'total_salary_max', ['total_salary_min', 'total_salary_max'], top_right_width, top_right_height)
+        //console.log(top_n_categories)
+        draw_horizontal_column_chart("#bottom_right_chart", div_tooltip, top_n_categories, 'organization_category', 'total_salary_max', ['total_salary_min', 'total_salary_max'], top_right_width, top_right_height)
 
       });
     </script>
