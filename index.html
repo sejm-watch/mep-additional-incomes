@@ -7,7 +7,11 @@
     <link rel="icon" type="image/png" href="img/sw_logo_small_squared.png">
 
     <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdn.rawgit.com/eligrey/canvas-toBlob.js/f1a01896135ab378aa5c0118eadd81da55e698d8/canvas-toBlob.js"></script>
+  	<script src="https://cdn.rawgit.com/eligrey/FileSaver.js/e9d941381475b5df8b7d7691013401e171014e89/FileSaver.js"></script>
+
     <script src="js/viz.js"></script>
+    <script src="js/save_to_image.js"></script>
 
     <style>
       div.tooltip {
@@ -303,6 +307,31 @@
           .attr("y", 50)
           .style("font-size", "18px").text("Submitted income declarations, 2019-2021")
 
+        header.append("svg:image").attr("class","logotype")
+          .attr("xlink:href", "img/GitHub-Mark-64px.png")
+          .attr("x", 1500)
+          .attr("y", 10)
+          .attr("height", 40)
+          .on("click", function() { window.open("https://github.com/sejm-watch/meps_additional_occupations/tree/gh-pages"); })
+          .on("mouseover", function() {d3.select(this).style("cursor", "pointer")})
+          .on("mouseout", function() {d3.select(this).style("cursor", "default")})
+
+        header.append("svg:image").attr("class","logotype")
+          .attr("xlink:href", "img/download_icon.png")
+          .attr("x", 1550)
+          .attr("y", 10)
+          .attr("height", 40)
+          .on('click', function(){
+          	var svgString = getSVGString(svg.node());
+          	svgString2Image( svgString, 2*svg_width, 2*svg_height, 'png', save ); // passes Blob and filesize String to the callback
+
+          	function save( dataBlob, filesize ){
+          		saveAs( dataBlob, 'MEPs additional income - sejm_watch.png' ); // FileSaver.js function
+          	}
+          })
+          .on("mouseover", function() {d3.select(this).style("cursor", "pointer")})
+          .on("mouseout", function() {d3.select(this).style("cursor", "default")})
+
         header.append("line")
           .attr("x1", 0).attr("x2", header_width)
           .attr("y1", header_height).attr("y2", header_height)
@@ -318,15 +347,20 @@
           .attr("x", 160)
           .attr("y", svg_height - 25)
           .style("font-size", "24px").style("font-weight", "bold").text("@sejm_watch")
-          footer.append("text").attr("class", "subtitle")
-            .attr("x", 166)
-            .attr("y", svg_height - 5)
-            .style("font-size", "14px").text("twitter.com/sejm_watch")
+        footer.append("text").attr("class", "subtitle")
+          .attr("x", 166)
+          .attr("y", svg_height - 5)
+          .style("font-size", "14px").text("twitter.com/sejm_watch")
+        footer
+          .on("click", function() { window.open("https://twitter.com/sejm_watch"); })
+          .on("mouseover", function() {d3.select(this).style("cursor", "pointer")})
+          .on("mouseout", function() {d3.select(this).style("cursor", "default")})
 
-        footer.append("line")
+        svg.append("line")
           .attr("x1", 0).attr("x2", header_width)
           .attr("y1", svg_height - 50).attr("y2", svg_height - 50)
           .attr("stroke", "#000000").attr("stroke-width", "1px")
+
 
 
 
