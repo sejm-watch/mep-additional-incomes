@@ -40,9 +40,9 @@
       .toggle {
         isolation: isolate;
         position: relative;
-        height: 15px;
+        height: 16px;
         width: 60px;
-        border-radius: 15px;
+        border-radius: 16px;
         background: #FFCC00;
         overflow: hidden;
       }
@@ -54,7 +54,7 @@
         left: 1px;
         height: 14px;
         width: 58px;
-        border-radius: 15px;
+        border-radius: 14px;
         overflow: hidden;
       }
 
@@ -183,6 +183,7 @@
         var deputies_income = [];
         deputies.forEach(function(dep){
             var dep_data = data.filter(x => x.deputy_name == dep);
+            var dep_photo_url = dep_data[0].deputy_photo_url;
             var country = dep_data[0].country;
             var eu_party =  dep_data[0].eu_party_name;
 
@@ -195,6 +196,7 @@
 
             deputies_income.push({
               'deputy_name': dep,
+              'dep_photo_url': dep_photo_url,
               'country': country,
               'eu_party': eu_party,
               'occupations_count': occupations_count,
@@ -206,7 +208,7 @@
         deputies_income = deputies_income.sort((a,b) => (a.salary_max < b.salary_max) ? 1 : ((b.salary_max < a.salary_max) ? -1 : 0))
         console.log(deputies_income)
 
-        
+
         countries.forEach(function(c){
             var country_deputies = deputies_income.filter(x => x.country == c);
 
