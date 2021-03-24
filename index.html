@@ -13,7 +13,7 @@
       div.tooltip {
         position: absolute;
         text-align: center;
-        width: 150px;
+        width: 175px;
         height: 42px;
         padding: 2px;
         font: 12px sans-serif;
@@ -105,45 +105,6 @@
     </label>
 
     <script>
-      var iso_lang_country = {
-        "eu": 'Spain',
-        "bg": 'Bulgaria',
-        "ca": 'Spain',
-        "hr": 'Croatia',
-        "cs": 'Czechia',
-        "da": 'Denmark',
-        "nl": 'Netherlands',
-        "nl-BE": 'Belgium',
-        "en-IE": 'Ireland',
-        "et": 'Estonia',
-        "fi": 'Finland',
-        "fr": 'France',
-        "fr-BE": 'Belgium',
-        "fr-LU": 'Luxembourg',
-        "gd-IE": 'Ireland',
-        "de": 'Germany',
-        "de-AT": 'Austria',
-        "de-LU": 'Luxembourg',
-        "el": 'Greece',
-        "hu": 'Hungary',
-        "it": "Italy",
-        "lv": "Latvia",
-        "lt": "Lithuania",
-        "pl": "Poland",
-        "pt-BR": "Portugal",
-        "pt": "Portugal",
-        "ro": "Romania",
-        "sk": "Slovakia",
-        "sl": "Slovenia",
-        "es": "Spain",
-        "sv": "Sweden"
-      }
-
-      var user_lang = navigator.language || navigator.userLanguage;
-      var user_country = iso_lang_country[user_lang] === undefined ? iso_lang_country[user_lang.split("-")[0]] : iso_lang_country[user_lang]
-      console.log(user_country)
-      console.log(window.screen.width)
-
       //tooltip
       var div_tooltip = d3.select("body").append("div")
           .attr("class", "tooltip")
@@ -152,37 +113,38 @@
       //svg & charts dimensions
       var svg_margin = {top: 10, right: 10, bottom: 10, left: 10},
           svg_width = 1600 - svg_margin.left - svg_margin.right,
-          svg_height = 800 - svg_margin.top - svg_margin.bottom;
+          svg_height = 900 - svg_margin.top - svg_margin.bottom;
 
       var top_left_margin = {top: 80, right: 30, bottom: 10, left: 70},
           top_left_width = 450 - top_left_margin.left - top_left_margin.right,
-          top_left_height = 600 - top_left_margin.top - top_left_margin.bottom;
+          top_left_height = 700 - top_left_margin.top - top_left_margin.bottom;
 
       var top_middle_margin = {top: 80, right: 30, bottom: 10, left: 70},
           top_middle_width = 450 - top_middle_margin.left - top_middle_margin.right,
-          top_middle_height = 600 - top_middle_margin.top - top_middle_margin.bottom;
+          top_middle_height = 700 - top_middle_margin.top - top_middle_margin.bottom;
 
       var top_right_margin = {top: 80, right: 30, bottom: 30, left: 100},
           top_right_width = 700 - top_right_margin.left - top_right_margin.right,
-          top_right_height = 300 - top_right_margin.top - top_right_margin.bottom;
+          top_right_height = 350 - top_right_margin.top - top_right_margin.bottom;
 
       var header_height = 60
       var header_width = 1600
 
+      var deputies_income = [];
       var country_income = [];
       var party_income = [];
       var category_income = [];
+      var organization_categories = [];
 
       d3.csv("data/declarations.csv").then(function(data) {
         //prepare data arrays for charts
         var deputies = [...new Set(data.map(x => x.deputy_name))];
         var eu_parties = [...new Set(data.map(x => x.eu_party_name))];
         var countries = [...new Set(data.map(x => x.country))];
-        var organization_categories = [...new Set(data.map(x => x.organization_category))];
+        organization_categories = [...new Set(data.map(x => x.organization_category))];
         organization_categories = organization_categories.filter(x => x != "");
 
         //single deputies income
-        var deputies_income = [];
         deputies.forEach(function(dep){
             var dep_data = data.filter(x => x.deputy_name == dep);
 
@@ -287,42 +249,41 @@
 
 
         organization_categories.forEach(function(o){
+          var org_deputies = deputies_income.filter(x => x[o + "_salary_max"] != 0 && x.remuneration_type != "previous_occupations");
 
-              var org_deputies = deputies_income.filter(x => x[o + "_salary_max"] != 0 && x.remuneration_type != "previous_occupations");
+          var deputies_count = org_deputies.length;
+          var deputies_additionally_paid = org_deputies.filter(x => parseInt(x[o + "_salary_max"]) > 0).length;
+          var perc_deputies_additionally_paid = deputies_additionally_paid/deputies_count
 
-              var deputies_count = org_deputies.length;
-              var deputies_additionally_paid = org_deputies.filter(x => parseInt(x[o + "_salary_max"]) > 0).length;
-              var perc_deputies_additionally_paid = deputies_additionally_paid/deputies_count
+          var occupations_count = org_deputies.map(x => parseInt(x.occupations_count)).reduce((a, b) => a + b, 0);
+          var paid_occupations_count = org_deputies.map(x => parseInt(x.paid_occupations_count)).reduce((a, b) => a + b, 0);
 
-              var occupations_count = org_deputies.map(x => parseInt(x.occupations_count)).reduce((a, b) => a + b, 0);
-              var paid_occupations_count = org_deputies.map(x => parseInt(x.paid_occupations_count)).reduce((a, b) => a + b, 0);
+          var total_salary_min = org_deputies.map(x => parseInt(x[o + "_salary_min"])).reduce((a, b) => a + b, 0)
+          var total_salary_max = org_deputies.map(x => parseInt(x[o + "_salary_max"])).reduce((a, b) => a + b, 0)
 
-              var total_salary_min = org_deputies.map(x => parseInt(x[o + "_salary_min"])).reduce((a, b) => a + b, 0)
-              var total_salary_max = org_deputies.map(x => parseInt(x[o + "_salary_max"])).reduce((a, b) => a + b, 0)
+          var avg_salary_min = org_deputies.map(x => parseInt(x[o + "_salary_min"])).reduce((a, b) => a + b, 0)/deputies_count;
+          var avg_salary_max = org_deputies.map(x => parseInt(x[o + "_salary_max"])).reduce((a, b) => a + b, 0)/deputies_count;
 
-              var avg_salary_min = org_deputies.map(x => parseInt(x[o + "_salary_min"])).reduce((a, b) => a + b, 0)/deputies_count;
-              var avg_salary_max = org_deputies.map(x => parseInt(x[o + "_salary_max"])).reduce((a, b) => a + b, 0)/deputies_count;
+          var median_salary_min = median(org_deputies.filter(x => parseInt(x[o + "_salary_min"]) > 0).map(x => parseInt(x[o + "_salary_min"])))
+          var median_salary_max = median(org_deputies.filter(x => parseInt(x[o + "_salary_max"]) > 0).map(x => parseInt(x[o + "_salary_max"])))
 
-              var median_salary_min = median(org_deputies.filter(x => parseInt(x[o + "_salary_min"]) > 0).map(x => parseInt(x[o + "_salary_min"])))
-              var median_salary_max = median(org_deputies.filter(x => parseInt(x[o + "_salary_max"]) > 0).map(x => parseInt(x[o + "_salary_max"])))
-
-              category_income.push({
-                'organization_category': o,
-                'deputies_count': deputies_count,
-                'deputies_additionally_paid': deputies_additionally_paid,
-                'perc_deputies_additionally_paid': perc_deputies_additionally_paid,
-                'occupations_count': occupations_count,
-                'paid_occupations_count': paid_occupations_count,
-                'total_salary_min': total_salary_min,
-                'total_salary_max': total_salary_max,
-                'avg_salary_min': avg_salary_min,
-                'avg_salary_max': avg_salary_max,
-                'median_salary_min': median_salary_min,
-                'median_salary_max': median_salary_max
-              })
+          category_income.push({
+            'organization_category': o,
+            'deputies_count': deputies_count,
+            'deputies_additionally_paid': deputies_additionally_paid,
+            'perc_deputies_additionally_paid': perc_deputies_additionally_paid,
+            'occupations_count': occupations_count,
+            'paid_occupations_count': paid_occupations_count,
+            'total_salary_min': total_salary_min,
+            'total_salary_max': total_salary_max,
+            'avg_salary_min': avg_salary_min,
+            'avg_salary_max': avg_salary_max,
+            'median_salary_min': median_salary_min,
+            'median_salary_max': median_salary_max
+          })
         });
         category_income = category_income.sort((a,b) => (a.total_salary_max < b.total_salary_max) ? 1 : ((b.total_salary_max < a.total_salary_max) ? -1 : 0))
-        console.log(category_income)
+        //console.log(category_income)
 
         //##################################
         //svg container, header & footer
@@ -351,20 +312,20 @@
         footer.append("svg:image").attr("class","logotype")
           .attr("xlink:href", "img/sw_eye.png")
           .attr("x", 20)
-          .attr("y", 760)
+          .attr("y", svg_height - 40)
           .attr("height", 40)
         footer.append("text").attr("class", "subtitle")
           .attr("x", 160)
-          .attr("y", 775)
+          .attr("y", svg_height - 25)
           .style("font-size", "24px").style("font-weight", "bold").text("@sejm_watch")
           footer.append("text").attr("class", "subtitle")
             .attr("x", 166)
-            .attr("y", 795)
+            .attr("y", svg_height - 5)
             .style("font-size", "14px").text("twitter.com/sejm_watch")
 
         footer.append("line")
           .attr("x1", 0).attr("x2", header_width)
-          .attr("y1", 750).attr("y2", 750)
+          .attr("y1", svg_height - 50).attr("y2", svg_height - 50)
           .attr("stroke", "#000000").attr("stroke-width", "1px")
 
 
@@ -389,6 +350,12 @@
           .attr("y", header_height + 63)
           .style("fill", "#AAAAAA")
           .style("font-size", "14px").style("font-style", "italic").text("by political party")
+
+        top_left_legend.append("text").attr("id", "label_by_party")
+          .attr("x", top_left_margin.left)
+          .attr("y", svg_height - 100)
+          .style("fill", "#000000")
+          .style("font-size", "14px").style("font-style", "italic").text("(click any bar above to drill-down to details)")
 
         var top_left_chart = svg.append("g")
             .attr("width", top_left_width + top_left_margin.left + top_left_margin.right)
@@ -439,6 +406,7 @@
             .attr("transform", "translate(" + (top_middle_margin.left + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_middle_margin.top) + ")");
         top_middle_chart.append("g").attr("class", "y_axis")
         top_middle_chart.append("g").attr("class", "x_axis")
+
         //Build chart
         draw_cleveland_chart("#top_middle_chart", div_tooltip, country_income, 'median_salary_min', 'median_salary_max', 'country', ['median_salary_min', 'median_salary_max'], top_middle_width, top_middle_height)
 
@@ -447,10 +415,11 @@
         //building earnings top 10 deputies (top right)
         //##################################
         var top_right_heading = svg.append("g").attr("class", "section_heading")
-        top_right_heading.append("text")
+        top_right_heading.append("text").attr("id", "top_right_section_heading")
           .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
           .attr("y", header_height + 35)
-          .style("font-size", "18px").style("font-weight", "bold").text("TOP10 MEPs additional monthly income")
+          .style("font-size", "18px").style("font-weight", "bold")
+          .text("TOP10 MEPs additional monthly income")
           var top_right_legend = svg.append("g").attr("class", "legend")
           top_right_legend.append("text")
             .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
@@ -473,10 +442,11 @@
         //building earnings top 10 categories (bottom right)
         //##################################
         var bottom_right_heading = svg.append("g").attr("class", "section_heading")
-        bottom_right_heading.append("text")
+        bottom_right_heading.append("text").attr("id", "bottom_right_section_heading")
           .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
           .attr("y", header_height + top_right_height + top_right_margin.top + top_right_margin.bottom + 35)
-          .style("font-size", "18px").style("font-weight", "bold").text("TOP10 sources of income - business areas")
+          .style("font-size", "18px").style("font-weight", "bold")
+          .text("TOP10 sources of income - business areas")
           var bottom_right_legend = svg.append("g").attr("class", "legend")
           bottom_right_legend.append("text")
             .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
@@ -494,7 +464,6 @@
         top_n_categories = category_income.filter((d) => d.organization_category != 'Unknown')
         top_n_categories = top_n_categories.filter((d,idx) => idx < 10)
         top_n_categories.push(top_n_categories.splice(top_n_categories.findIndex(function(e){return e.organization_category=='Other'}), 1)[0]);
-        //console.log(top_n_categories)
         draw_horizontal_column_chart("#bottom_right_chart", div_tooltip, top_n_categories, 'organization_category', 'total_salary_max', ['total_salary_min', 'total_salary_max'], top_right_width, top_right_height)
 
       });
