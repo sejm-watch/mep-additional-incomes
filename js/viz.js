@@ -10,6 +10,32 @@ var party_colors = {
   'GUE-NGL': {'fill': '#990000', 'text': "#FFFFFF"}
 }
 
+
+function wrap(text, width) {
+  text.each(function() {
+    var text = d3.select(this),
+        words = text.text().split(/\s+/).reverse(),
+        word,
+        line = [],
+        lineNumber = 0,
+        lineHeight = 1.2, // ems
+        y = text.attr("y"),
+        dy = parseFloat(text.attr("dy")),
+        tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+    while (word = words.pop()) {
+      line.push(word);
+      tspan.text(line.join(" "));
+      if (tspan.node().getComputedTextLength() > width) {
+        line.pop();
+        tspan.text(line.join(" "));
+        line = [word];
+        tspan = text.append("tspan").attr("x", 0).attr("y", y-5).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+      }
+    }
+  });
+};
+
+
 const median = arr => {
   const mid = Math.floor(arr.length / 2),
     nums = [...arr].sort((a, b) => a - b);
@@ -51,7 +77,7 @@ function draw_column_chart(chart_container_id, tooltip_container, data, x_source
       tooltip_container.transition()
         .duration(200)
         .style("opacity", .9);
-      tooltip_container.html("<b>" + d[tooltip_sources[0]] + "</b> out of <b>" + d[tooltip_sources[1]] + "</b><br/>additional monthly income")
+      tooltip_container.html("<b>" + d[tooltip_sources[0]] + "</b> out of <b>" + d[tooltip_sources[1]] + "</b> declared<br/>additional monthly income")
         .style("left", (event.pageX) + "px")
         .style("top", (event.pageY - 28) + "px");
       })
@@ -102,20 +128,9 @@ function draw_cleveland_chart(chart_container_id, tooltip_container, data, x1_so
     .range([ 0,height ])
     .domain(data.map(function(d) { return d[y_source]; }))
     .padding(1);
-
   chart_container.select(".y_axis")
     .call(d3.axisLeft(y))
 
-
-
-    var bars = chart_container.selectAll("rect")
-    bars.transition().duration(300).attr("width", 0)
-    bars
-      .exit()
-      .data(data)
-      .enter()
-      .append("rect")
-      .merge(bars)
 
   //lines
   var lines = chart_container.selectAll(".cleveland_lines")
@@ -135,7 +150,7 @@ function draw_cleveland_chart(chart_container_id, tooltip_container, data, x1_so
       .transition().delay(100).duration(100)
       .attr("stroke", "#003399")
       .attr("stroke-width", "2px")
-      .transition().delay(0).duration(750)
+      .transition().delay(100).duration(750)
         .attr("x2", function(d) { return x(d[x2_source]); })//.delay(function(d,i){return(400+i*50)})
 
 
@@ -164,7 +179,7 @@ function draw_cleveland_chart(chart_container_id, tooltip_container, data, x1_so
       .attr("cx", function(d) { return x(d[x1_source]); })
       .attr("cy", function(d) { return y(d[y_source]); })
       .attr("r", 0)
-      .transition().delay(0).duration(300)
+      .transition().delay(100).duration(300)
       .attr("r", "4")
       .style("fill", "#FFCC00")
       .style("stroke", "#003399")
@@ -195,7 +210,7 @@ function draw_cleveland_chart(chart_container_id, tooltip_container, data, x1_so
       .attr("cx", function(d) { return x(d[x1_source]); })
       .attr("cy", function(d) { return y(d[y_source]); })
       .attr("r", 0)
-      .transition().delay(0).duration(200)
+      .transition().delay(100).duration(200)
       .attr("r", "8")
       .style("fill", "#6699ff")
       .style("stroke", "#003399")
@@ -227,67 +242,95 @@ function draw_cleveland_chart(chart_container_id, tooltip_container, data, x1_so
 function draw_lollipop_chart(chart_container_id, tooltip_container, data, x_source, y_source, tooltip_sources, width, height){
   var chart_container = d3.select(chart_container_id)
 
-  // Add X axis
-  var x = d3.scaleLinear()
-    .domain([0, d3.max(data.map(function(d) {return d[x_source]}))*1.05])
-    .range([ 0, width]);
+  // X axis
+  var x = d3.scaleBand()
+    .range([ 0,width ])
+    .domain(data.map(function(d) { return d[x_source]; }))
+    .padding(1);
+  chart_container.select(".x_axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x))
 
-  // Y axis
-  var y = d3.scaleBand()
-    .range([ 0, height ])
-    .domain(data.map(function(d) { return d[y_source]; }))
-    .padding(0.25);
+  chart_container.selectAll('.tick text')
+    .attr("font-size", "7px")
+    .call(wrap, x.bandwidth());
+    //text.split(" ").join("\n")
 
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, d3.max(data.map(function(d) {return d[y_source]}))*1.2])
+    .range([height, 0]);
   chart_container.select(".y_axis")
-    .call(d3.axisLeft(y))
+    .call(d3.axisLeft(y)
+      .tickFormat(d3.format(".2s"))
+    )
 
-  var bars = chart_container.selectAll("rect")
-  bars.transition().duration(300).attr("width", 0)
-  bars
+  //lines
+  var lines = chart_container.selectAll(".cleveland_lines")
+  lines.transition().duration(300).attr("stroke-width", "0px")
+  lines
     .exit()
     .data(data)
     .enter()
-    .append("rect")
-    .merge(bars)
-    .attr("x", x(0) )
-    .attr("y", function(d) {return y(d[y_source]); })
-    .attr("width", 0)
-    .attr("height", y.bandwidth() )
-    .attr("fill", function(d){return Object.keys(party_colors).includes(d[y_source]) ? party_colors[d[y_source]]['fill'] : "#003399"})
-    .on("mouseover", function(event, d) {
-      tooltip_container.transition()
-        .duration(200)
-        .style("opacity", .9);
-      tooltip_container.html("<b>" + d[tooltip_sources[0]] + "</b> out of <b>" + d[tooltip_sources[1]] + "</b><br/>additional monthly income")
-        .style("left", (event.pageX) + "px")
-        .style("top", (event.pageY - 28) + "px");
+    .append("line")
+    .merge(lines)
+      .attr("class", "cleveland_lines")
+      .attr("x1", function(d) { return x(d[x_source]); })
+      .attr("x2", function(d) { return x(d[x_source]); })
+      .attr("y1", function(d) { return y(0); })
+      .attr("y2", function(d) { return y(0); })
+      .attr("stroke", "#FFFFFF")
+      .transition().delay(100).duration(100)
+      .attr("stroke", function(d){return Object.keys(party_colors).includes(d['eu_party']) ? party_colors[d['eu_party']]['fill'] : "#003399"})
+      .attr("stroke-width", "5px")
+      .transition().delay(0).duration(750)
+        .attr("y2", function(d) { return y(d[y_source]); })
+
+  var r_photo = 40
+  var defs = chart_container.append('svg:defs');
+  data.forEach(function(d, i){
+      defs.append("svg:pattern")
+        .attr("id", "profile_photo" + i)
+        .attr("width", r_photo)
+        .attr("height", r_photo)
+        .append("svg:image")
+        .attr("xlink:href", d.dep_photo_url)
+        .attr("width", r_photo)
+        .attr("height", r_photo)
+        .attr("x", 0)
+        .attr("y", 0);
+  })
+
+
+  var circles = chart_container.selectAll(".circles")
+  circles.transition().duration(300).attr("r", 0)
+  circles
+    .exit()
+    .data(data)
+    .enter()
+    .append("circle")
+    .merge(circles)
+      .on("mouseover", function(event, d) {
+        tooltip_container.transition()
+          .duration(200)
+          .style("opacity", .9);
+        tooltip_container.html("from <b>" + (isNaN(d[tooltip_sources[0]]) ? '' : Math.round(d[tooltip_sources[0]]/100)/10) + "</b> up to <b>" + (isNaN(d[tooltip_sources[1]]) ? '' : Math.round(d[tooltip_sources[1]]/100)/10) + " kEUR</b><br/>additional monthly income")
+          .style("left", (event.pageX) + "px")
+          .style("top", (event.pageY - 28) + "px");
+        })
+      .on("mouseout", function(d) {
+        tooltip_container.transition()
+          .duration(300)
+          .style("opacity", 0);
       })
-    .on("mouseout", function(d) {
-      tooltip_container.transition()
-        .duration(300)
-        .style("opacity", 0);
-    })
-    .transition().delay(300).duration(750)
-    .attr("width", function(d) { return x(d[x_source]); })
-    //.delay(function(d,i){return(i*50)})
-
-
-  //bar labels
-  var bar_labels = chart_container.selectAll(".bar_labels")
-  bar_labels.transition().duration(300).style("opacity", 0)
-  bar_labels
-    .exit()
-    .data(data)
-    .enter()
-    .append("text")
-    .merge(bar_labels)
-    .attr("class", "bar_labels")
-    .attr("x", function(d) { return x(d[x_source]) - 25; } )
-    .attr("y", function(d) { return y(d[y_source]) + y.bandwidth()/2 + 8/2; })
-    .style("font-size", "11px")
-    .style('opacity',0).transition().delay(800).duration(500).style('opacity',1)//.delay(function(d,i){return(400+i*50)})
-    .attr("fill", function(d){return Object.keys(party_colors).includes(d[y_source]) ? party_colors[d[y_source]]['text'] : "#FFFFFF"})
-    .text(function(d) { return (d[x_source] != 0) ? d3.format(".0%")(d[x_source]) : '';});
+      .attr("class", "circles")
+      .attr("cx", function(d) { return x(d[x_source]); })
+      .attr("cy", function(d) { return y(d[y_source]); })
+      .style("fill", function(d, i){return "url(#profile_photo" + i + ")"})
+      .attr("r", 0)
+      .transition().delay(750).duration(250)
+      .attr("r", r_photo/2)
+      .style("stroke", function(d){return Object.keys(party_colors).includes(d['eu_party']) ? party_colors[d['eu_party']]['fill'] : "#003399"});
 }
 
 

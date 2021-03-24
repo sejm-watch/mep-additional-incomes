@@ -162,8 +162,8 @@
           top_middle_width = 450 - top_middle_margin.left - top_middle_margin.right,
           top_middle_height = 600 - top_middle_margin.top - top_middle_margin.bottom;
 
-      var top_right_margin = {top: 80, right: 30, bottom: 10, left: 70},
-          top_right_width = 450 - top_right_margin.left - top_right_margin.right,
+      var top_right_margin = {top: 80, right: 30, bottom: 30, left: 100},
+          top_right_width = 700 - top_right_margin.left - top_right_margin.right,
           top_right_height = 300 - top_right_margin.top - top_right_margin.bottom;
 
       var header_height = 60
@@ -171,6 +171,7 @@
 
       var country_income = [];
       var party_income = [];
+      var category_income = [];
 
       d3.csv("data/declarations.csv").then(function(data) {
         //prepare data arrays for charts
@@ -178,11 +179,13 @@
         var eu_parties = [...new Set(data.map(x => x.eu_party_name))];
         var countries = [...new Set(data.map(x => x.country))];
         var organization_categories = [...new Set(data.map(x => x.organization_category))];
+        organization_categories = organization_categories.filter(x => x != "");
 
         //single deputies income
         var deputies_income = [];
         deputies.forEach(function(dep){
             var dep_data = data.filter(x => x.deputy_name == dep);
+
             var dep_photo_url = dep_data[0].deputy_photo_url;
             var country = dep_data[0].country;
             var eu_party =  dep_data[0].eu_party_name;
@@ -194,7 +197,7 @@
             var salary_min = dep_data.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0);
             var salary_max = dep_data.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0);
 
-            deputies_income.push({
+            dep_obj = {
               'deputy_name': dep,
               'dep_photo_url': dep_photo_url,
               'country': country,
@@ -203,11 +206,20 @@
               'paid_occupations_count': paid_occupations_count,
               'salary_min': salary_min,
               'salary_max': salary_max
-            })
+            };
+
+            organization_categories.forEach(function(o){
+              var dep_category_data = dep_data.filter(x => x.organization_category == o)
+              var category_salary_min = dep_category_data.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0);
+              var category_salary_max = dep_category_data.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0);
+              dep_obj[o + "_salary_min"] = category_salary_min
+              dep_obj[o + "_salary_max"] = category_salary_max
+            });
+
+            deputies_income.push(dep_obj)
         });
         deputies_income = deputies_income.sort((a,b) => (a.salary_max < b.salary_max) ? 1 : ((b.salary_max < a.salary_max) ? -1 : 0))
-        console.log(deputies_income)
-
+        //console.log(deputies_income)
 
         countries.forEach(function(c){
             var country_deputies = deputies_income.filter(x => x.country == c);
@@ -272,6 +284,44 @@
         });
         party_income = party_income.sort((a,b) => (a.perc_deputies_additionally_paid < b.perc_deputies_additionally_paid) ? 1 : ((b.perc_deputies_additionally_paid < a.perc_deputies_additionally_paid) ? -1 : 0))
         //console.log(party_income)
+
+
+        organization_categories.forEach(function(o){
+              var org_deputies = deputies_income.filter(x => x[o + "_salary_max"] != 0 && x.remuneration_type != "previous_occupations");
+
+              var deputies_count = org_deputies.length;
+              var deputies_additionally_paid = org_deputies.filter(x => parseInt(x.salary_min) > 0).length;
+              var perc_deputies_additionally_paid = deputies_additionally_paid/deputies_count
+
+              var occupations_count = org_deputies.map(x => parseInt(x.occupations_count)).reduce((a, b) => a + b, 0);
+              var paid_occupations_count = org_deputies.map(x => parseInt(x.paid_occupations_count)).reduce((a, b) => a + b, 0);
+
+              var total_salary_min = org_deputies.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0)
+              var total_salary_max = org_deputies.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0)
+
+              var avg_salary_min = org_deputies.map(x => parseInt(x.salary_min)).reduce((a, b) => a + b, 0)/deputies_count;
+              var avg_salary_max = org_deputies.map(x => parseInt(x.salary_max)).reduce((a, b) => a + b, 0)/deputies_count;
+
+              var median_salary_min = median(org_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_min)))
+              var median_salary_max = median(org_deputies.filter(x => parseInt(x.salary_min) > 0).map(x => parseInt(x.salary_max)))
+
+              category_income.push({
+                'organization_category': o,
+                'deputies_count': deputies_count,
+                'deputies_additionally_paid': deputies_additionally_paid,
+                'perc_deputies_additionally_paid': perc_deputies_additionally_paid,
+                'occupations_count': occupations_count,
+                'paid_occupations_count': paid_occupations_count,
+                'total_salary_min': total_salary_min,
+                'total_salary_max': total_salary_max,
+                'avg_salary_min': avg_salary_min,
+                'avg_salary_max': avg_salary_max,
+                'median_salary_min': median_salary_min,
+                'median_salary_max': median_salary_max
+              })
+        });
+        category_income = category_income.sort((a,b) => (a.total_salary_max < b.total_salary_max) ? 1 : ((b.total_salary_max < a.total_salary_max) ? -1 : 0))
+        console.log(category_income)
 
         //##################################
         //svg container, header & footer
@@ -392,13 +442,59 @@
         draw_cleveland_chart("#top_middle_chart", div_tooltip, country_income, 'median_salary_min', 'median_salary_max', 'country', ['median_salary_min', 'median_salary_max'], top_middle_width, top_middle_height)
 
 
+        //##################################
+        //building earnings top 10 deputies (top right)
+        //##################################
+        var top_right_heading = svg.append("g").attr("class", "section_heading")
+        top_right_heading.append("text")
+          .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
+          .attr("y", header_height + 35)
+          .style("font-size", "18px").style("font-weight", "bold").text("TOP10 MEPs additional monthly income")
+          var top_right_legend = svg.append("g").attr("class", "legend")
+          top_right_legend.append("text")
+            .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
+            .attr("y", header_height + 53)
+            .style("font-size", "12px").style("font-style", "italic").text("*Maximal income presented, hoover photo to see income range.")
         var top_right_chart = svg.append("g")
             .attr("width", top_right_width + top_right_margin.left + top_right_margin.right)
             .attr("height", top_right_height + top_right_margin.top +top_right_margin.bottom)
           .append("g").attr("id", 'top_right_chart')
-            .attr("transform", "translate(" + (top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_right_margin.top) + ")");
+            .attr("transform", "translate(" + (top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_right_margin.top) + ")");
         top_right_chart.append("g").attr("class", "y_axis")
         top_right_chart.append("g").attr("class", "x_axis")
+
+        //Build chart
+        top_n_deputies = deputies_income.filter((d,idx) => idx < 10)
+        draw_lollipop_chart("#top_right_chart", div_tooltip, top_n_deputies, 'deputy_name', 'salary_max', ['salary_min', 'salary_max'], top_right_width, top_right_height)
+
+
+        //##################################
+        //building earnings top 10 categories (bottom right)
+        //##################################
+        var bottom_right_heading = svg.append("g").attr("class", "section_heading")
+        bottom_right_heading.append("text")
+          .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
+          .attr("y", header_height + top_right_height + top_right_margin.top + top_right_margin.bottom + 35)
+          .style("font-size", "18px").style("font-weight", "bold").text("TOP10 sources of income - business areas")
+          var bottom_right_legend = svg.append("g").attr("class", "legend")
+          bottom_right_legend.append("text")
+            .attr("x", top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right)
+            .attr("y", header_height + top_right_height + top_right_margin.top + top_right_margin.bottom + 53)
+            .style("font-size", "12px").style("font-style", "italic").text("*Maximal income presented, hoover photo to see income range.")
+        var bottom_right_chart = svg.append("g")
+            .attr("width", top_right_width + top_right_margin.left + top_right_margin.right)
+            .attr("height", top_right_height + top_right_margin.top +top_right_margin.bottom)
+          .append("g").attr("id", 'top_right_chart')
+            .attr("transform", "translate(" + (top_right_margin.left + top_middle_width + top_middle_margin.left + top_middle_margin.right + top_left_width + top_left_margin.left + top_left_margin.right) + "," + (header_height + top_right_margin.top + top_right_height + top_right_margin.bottom + top_right_margin.top) + ")");
+        bottom_right_chart.append("g").attr("class", "y_axis")
+        bottom_right_chart.append("g").attr("class", "x_axis")
+
+        //Build chart
+        top_n_categories = category_income.filter((d) => d.organization_category != 'Unknown')
+        top_n_categories = top_n_categories.filter((d,idx) => idx < 10)
+        top_n_categories.push(top_n_categories.splice(top_n_categories.findIndex(function(e){return e.organization_category=='Other'}), 1)[0]);
+        console.log(top_n_categories)
+        //draw_horizontal_column_chart("#top_right_chart", div_tooltip, top_n_categories, 'organization_category', 'total_salary_max', ['total_salary_min', 'total_salary_max'], top_right_width, top_right_height)
 
       });
     </script>
