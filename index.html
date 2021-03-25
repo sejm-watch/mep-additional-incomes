@@ -152,11 +152,13 @@
       var header_height = 60
       var header_width = 1600
 
+      //kind of global variables
       var deputies_income = [];
       var country_income = [];
       var party_income = [];
       var category_income = [];
       var organization_categories = [];
+
 
       d3.csv("data/declarations.csv").then(function(data) {
         //prepare data arrays for charts
