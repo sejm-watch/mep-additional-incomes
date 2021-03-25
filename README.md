@@ -1,5 +1,5 @@
 # mep-additional-incomes
-Did you know that MEPs are allowed to take up side jobs? They take on opportunity
+<b>Did you know that MEPs are allowed to take up side jobs? They take on opportunity.</b>
 
 475 members are involved into extra activities and 201 of them (28%) get money for it.
 As the requirement is to declare income in pay ranges - total declared earnings reach from <b>300k to 880k EUR / month</b>. This is on top of their EUP salary, which is near to 13k EUR / month (incl. expenditure allowance).
