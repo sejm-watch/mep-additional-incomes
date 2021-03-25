@@ -22,4 +22,4 @@ Info:
 About:
 - <a href='https://twitter.com/sejm_watch' target='_blank'>@sejm_watch</a> is a Twitter bot summarizing parliament and Twitter activity of Polish deputies
 - we keep the bot alive, posting every day and we tweet interesting (hopefully) analyzes, like this.
-- any questions? DM @sejm_watch on Twitter"
+- any questions? DM @sejm_watch on Twitter
