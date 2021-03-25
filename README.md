@@ -1,7 +1,7 @@
 # mep-additional-incomes
 <b>Did you know that MEPs are allowed to take up side jobs? They take on opportunity.</b>
 
-<a href='https://sejm-watch.github.io/mep-additional-incomes/' target='_blank'>Here's</a> the summary of these incomes - by country, party and business area.
+<a href='https://sejm-watch.github.io/mep-additional-incomes/' target='_blank'>Here's</a> graphical summary of these incomes - by country, party and business area.
 Created with [d3js.org](https://d3js.org). Source csv is in [data folder](https://github.com/sejm-watch/mep-additional-incomes/tree/gh-pages/data).
 
 475 members are involved into extra activities and 201 of them (28%) get money for it.
