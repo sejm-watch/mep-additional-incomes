@@ -14,7 +14,7 @@ Charts are interactive, you can play with them.
 - hover chart elements to see more details
 
 Info:
-- Created with [d3js.org](https://d3js.org). 
+- Created with [d3js.org](https://d3js.org).
 - Source csv in [data folder](https://github.com/sejm-watch/mep-additional-incomes/tree/gh-pages/data).
 - Data scraped from [EUP](https://www.europarl.europa.eu/portal/en) and cleansed.
 - I'll committ MEPs income declarations scraper to [main branch](https://github.com/sejm-watch/mep-additional-incomes) soon.
@@ -22,4 +22,4 @@ Info:
 About:
 - <a href='https://twitter.com/sejm_watch' target='_blank'>@sejm_watch</a> is a Twitter bot summarizing parliament and Twitter activity of Polish deputies
 - we keep the bot alive, posting every day and we tweet interesting (hopefully) analyzes, like this.
-- any questions? DM @sejm_watch on Twitter
+- any questions? DM @sejm_watch on Twitter.
