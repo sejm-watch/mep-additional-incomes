@@ -18,6 +18,7 @@ Info:
 - Source csv in [data folder](https://github.com/sejm-watch/mep-additional-incomes/tree/gh-pages/data).
 - Data scraped from [EUP](https://www.europarl.europa.eu/portal/en) and cleansed.
 - Scraper in [main branch](https://github.com/sejm-watch/mep-additional-incomes). It's not perfect though...
+  - dependencies on following libraries: requests, BeautifulSoup, tabula, pandas
 
 About:
 - <a href='https://twitter.com/sejm_watch' target='_blank'>@sejm_watch</a> is a Twitter bot summarizing parliament and Twitter activity of Polish deputies
