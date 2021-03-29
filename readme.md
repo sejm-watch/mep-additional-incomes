@@ -1,4 +1,4 @@
-# mep-additional-incomes
+# mep-additional-incomes scraper
 <b>Did you know that MEPs are allowed to take up side jobs? They take on opportunity.</b>
 
 <a href='https://sejm-watch.github.io/mep-additional-incomes/' target='_blank'>Here's</a> graphical summary of their incomes - by country, party and by business area too.
