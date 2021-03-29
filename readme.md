@@ -17,7 +17,7 @@ Info:
 - Created with [d3js.org](https://d3js.org).
 - Source csv in [data folder](https://github.com/sejm-watch/mep-additional-incomes/tree/gh-pages/data).
 - Data scraped from [EUP](https://www.europarl.europa.eu/portal/en) and cleansed.
-- I'll committ MEPs income declarations scraper to [main branch](https://github.com/sejm-watch/mep-additional-incomes) soon.
+- Scraper in [main branch](https://github.com/sejm-watch/mep-additional-incomes). It's not perfect though...
 
 About:
 - <a href='https://twitter.com/sejm_watch' target='_blank'>@sejm_watch</a> is a Twitter bot summarizing parliament and Twitter activity of Polish deputies
